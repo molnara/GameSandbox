@@ -1,35 +1,53 @@
 
-extends SceneTree
+extends "res://tests/framework/test_suite.gd"
 
 const LoggerScript = preload("res://core/logging/log.gd")
 
 var logger: Node
 var captured_messages: Array[Dictionary] = []
 
-var passed: int = 0
-var failed: int = 0
+
+func _init() -> void:
+	suite_name = "Logger Unit Tests"
+
+	register_test(test_default_level)
+	register_test(test_set_level)
+	register_test(test_suppress_below_minimum)
+	register_test(test_emit_at_minimum)
+	register_test(test_emit_above_minimum)
+	register_test(test_normalize_category)
+	register_test(test_preserve_message)
+	register_test(test_off_suppresses_all)
+
+	register_test(test_trace_severity)
+	register_test(test_debug_severity)
+	register_test(test_info_severity)
+	register_test(test_warn_severity)
+	register_test(test_error_severity)
+	register_test(test_default_category)
+	register_test(test_timestamp_format)
+	register_test(test_multiple_messages)
+
+	register_test(test_empty_message)
+	register_test(test_empty_category)
+	register_test(test_unicode_message)
+	register_test(test_special_characters)
+	register_test(test_all_severity_boundaries)
+	register_test(test_exactly_once_emission)
 
 
-func _initialize() -> void:
-	print("\nRunning Logger Unit Tests...\n")
-
+func setup_suite() -> void:
 	logger = LoggerScript.new()
-
 	logger.message_logged.connect(_capture_message)
 
-	_run_tests()
 
-	print("\nResults: %d passed, %d failed" % [
-		passed,
-		failed
-	])
-
+func teardown_suite() -> void:
 	logger.free()
 
-	if failed > 0:
-		quit(1)
-	else:
-		quit(0)
+
+func setup_test() -> void:
+	captured_messages.clear()
+	logger.set_level(logger.Level.DEBUG)
 
 
 func _capture_message(
@@ -46,116 +64,72 @@ func _capture_message(
 	})
 
 
-func _reset() -> void:
-	captured_messages.clear()
-	logger.set_level(logger.Level.DEBUG)
-
-
-func _check(
-	condition: bool,
-	description: String
-) -> void:
-	if condition:
-		passed += 1
-		print("PASS  ", description)
-	else:
-		failed += 1
-		printerr("FAIL  ", description)
-
-
-func _run_tests() -> void:
-	test_default_level()
-	test_set_level()
-	test_suppress_below_minimum()
-	test_emit_at_minimum()
-	test_emit_above_minimum()
-	test_normalize_category()
-	test_preserve_message()
-	test_off_suppresses_all()
-	test_trace_severity()
-	test_debug_severity()
-	test_info_severity()
-	test_warn_severity()
-	test_error_severity()
-	test_default_category()
-	test_timestamp_format()
-	test_multiple_messages()
-	test_empty_message()
-	test_empty_category()
-	test_unicode_message()
-	test_special_characters()
-	test_all_severity_boundaries()
-	test_exactly_once_emission()
-
 
 func test_default_level() -> void:
-	_reset()
 
-	var valid: bool = logger.minimum_level == logger.Level.DEBUG
-	
-	_check(
-		valid,
-        "Default log level"
+	var fresh_logger: Node = LoggerScript.new()
+
+	assertions.equal(
+		fresh_logger.minimum_level,
+		fresh_logger.Level.DEBUG,
+		"Default log level"
 	)
+
+	fresh_logger.free()
 
 
 func test_set_level() -> void:
-	_reset()
 
 	logger.set_level(logger.Level.WARN)
 
 	var valid: bool = logger.minimum_level == logger.Level.WARN
 	
-	_check(
+	assertions.check(
 		valid,
         "Set minimum log level"
 	)
 
 
 func test_suppress_below_minimum() -> void:
-	_reset()
 
 	logger.set_level(logger.Level.WARN)
 	logger.info("Should be hidden", "TEST")
 	
 	var valid: bool = captured_messages.is_empty()
 
-	_check(
+	assertions.check(
 		valid,
         "Suppress messages below minimum"
 	)
 
 
 func test_emit_at_minimum() -> void:
-	_reset()
 
 	logger.set_level(logger.Level.WARN)
 	logger.warn("Warning", "TEST")
 	
 	var valid: bool = captured_messages.size() == 1
 
-	_check(
+	assertions.check(
 		valid,
         "Emit messages at minimum"
 	)
 
 
 func test_emit_above_minimum() -> void:
-	_reset()
 
 	logger.set_level(logger.Level.WARN)
 	logger.error("Error", "TEST")
 	
 	var valid: bool = captured_messages.size() == 1
 
-	_check(
+	assertions.check(
 		valid,
         "Emit messages above minimum"
 	)
 
 
 func test_normalize_category() -> void:
-	_reset()
 
 	logger.info("Message", "player")
 	
@@ -164,14 +138,13 @@ func test_normalize_category() -> void:
 		and captured_messages[0]["category"] == "PLAYER"
 	)
 
-	_check(
+	assertions.check(
 		valid, 
 		"Normalize category"
 		)
 
 
 func test_preserve_message() -> void:
-	_reset()
 
 	logger.info("Hello GameSandbox", "TEST")
 	
@@ -180,28 +153,26 @@ func test_preserve_message() -> void:
 		and captured_messages[0]["message"] == "Hello GameSandbox"
 	)
 
-	_check(
+	assertions.check(
 		valid, 
 		"Preserve message content"
 		)
 
 
 func test_off_suppresses_all() -> void:
-	_reset()
 
 	logger.set_level(logger.Level.OFF)
 	logger.error("Should be hidden", "TEST")
 	
 	var valid: bool = captured_messages.is_empty()
 
-	_check(
+	assertions.check(
 		valid,
         "Suppress all messages when OFF"
 	)
 
 
 func test_trace_severity() -> void:
-	_reset()
 
 	logger.set_level(logger.Level.TRACE)
 	logger.trace("Trace message", "TEST")
@@ -211,11 +182,10 @@ func test_trace_severity() -> void:
 		and captured_messages[0]["level"] == logger.Level.TRACE
 	)
 
-	_check(valid, "TRACE severity")
+	assertions.check(valid, "TRACE severity")
 
 
 func test_debug_severity() -> void:
-	_reset()
 
 	logger.debug("Debug message", "TEST")
 
@@ -224,11 +194,10 @@ func test_debug_severity() -> void:
 		and captured_messages[0]["level"] == logger.Level.DEBUG
 	)
 
-	_check(valid, "DEBUG severity")
+	assertions.check(valid, "DEBUG severity")
 
 
 func test_info_severity() -> void:
-	_reset()
 
 	logger.info("Info message", "TEST")
 
@@ -237,11 +206,10 @@ func test_info_severity() -> void:
 		and captured_messages[0]["level"] == logger.Level.INFO
 	)
 
-	_check(valid, "INFO severity")
+	assertions.check(valid, "INFO severity")
 
 
 func test_warn_severity() -> void:
-	_reset()
 
 	logger.warn("Warning message", "TEST")
 
@@ -250,11 +218,10 @@ func test_warn_severity() -> void:
 		and captured_messages[0]["level"] == logger.Level.WARN
 	)
 
-	_check(valid, "WARN severity")
+	assertions.check(valid, "WARN severity")
 
 
 func test_error_severity() -> void:
-	_reset()
 
 	logger.error("Error message", "TEST")
 
@@ -263,11 +230,10 @@ func test_error_severity() -> void:
 		and captured_messages[0]["level"] == logger.Level.ERROR
 	)
 
-	_check(valid, "ERROR severity")
+	assertions.check(valid, "ERROR severity")
 
 
 func test_default_category() -> void:
-	_reset()
 
 	logger.info("No category specified")
 
@@ -276,11 +242,10 @@ func test_default_category() -> void:
 		and captured_messages[0]["category"] == "GENERAL"
 	)
 
-	_check(valid, "Default category")
+	assertions.check(valid, "Default category")
 
 
 func test_timestamp_format() -> void:
-	_reset()
 
 	logger.info("Timestamp test", "TEST")
 
@@ -310,10 +275,9 @@ func test_timestamp_format() -> void:
 				and int(second) <= 59
 			)
 
-	_check(valid, "Timestamp format HH:MM:SS")
+	assertions.check(valid, "Timestamp format HH:MM:SS")
 
 func test_multiple_messages() -> void:
-	_reset()
 
 	logger.info("First", "TEST")
 	logger.warn("Second", "TEST")
@@ -330,11 +294,10 @@ func test_multiple_messages() -> void:
 			and captured_messages[2]["message"] == "Third"
 		)
 
-	_check(valid, "Multiple messages preserve order")
+	assertions.check(valid, "Multiple messages preserve order")
 
 
 func test_empty_message() -> void:
-	_reset()
 
 	logger.info("", "TEST")
 
@@ -343,11 +306,10 @@ func test_empty_message() -> void:
 		and captured_messages[0]["message"] == ""
 	)
 
-	_check(valid, "Empty message is preserved")
+	assertions.check(valid, "Empty message is preserved")
 
 
 func test_empty_category() -> void:
-	_reset()
 
 	logger.info("Empty category test", "")
 
@@ -356,11 +318,10 @@ func test_empty_category() -> void:
 		and captured_messages[0]["category"] == ""
 	)
 
-	_check(valid, "Empty category is preserved")
+	assertions.check(valid, "Empty category is preserved")
 
 
 func test_unicode_message() -> void:
-	_reset()
 
 	var original: String = "Hello 世界 — Привет 🌍"
 
@@ -371,11 +332,10 @@ func test_unicode_message() -> void:
 		and captured_messages[0]["message"] == original
 	)
 
-	_check(valid, "Unicode message preserved")
+	assertions.check(valid, "Unicode message preserved")
 
 
 func test_special_characters() -> void:
-	_reset()
 
 	var original: String = "Line 1\nLine 2\t\"Quoted\" \\ Path"
 
@@ -386,7 +346,7 @@ func test_special_characters() -> void:
 		and captured_messages[0]["message"] == original
 	)
 
-	_check(valid, "Special characters preserved")
+	assertions.check(valid, "Special characters preserved")
 
 
 func test_all_severity_boundaries() -> void:
@@ -402,7 +362,7 @@ func test_all_severity_boundaries() -> void:
 	var valid: bool = true
 
 	for minimum: int in levels:
-		_reset()
+		captured_messages.clear()
 		logger.set_level(minimum)
 
 		logger.trace("Trace", "TEST")
@@ -430,11 +390,10 @@ func test_all_severity_boundaries() -> void:
 				]
 			)
 
-	_check(valid, "All severity boundaries")
+	assertions.check(valid, "All severity boundaries")
 
 
 func test_exactly_once_emission() -> void:
-	_reset()
 
 	logger.info("Single message", "TEST")
 
@@ -448,4 +407,4 @@ func test_exactly_once_emission() -> void:
 			and captured_messages[0]["level"] == logger.Level.INFO
 		)
 
-	_check(valid, "Exactly-once signal emission")
+	assertions.check(valid, "Exactly-once signal emission")
