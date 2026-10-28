@@ -80,6 +80,12 @@ func _run_tests() -> void:
 	test_default_category()
 	test_timestamp_format()
 	test_multiple_messages()
+	test_empty_message()
+	test_empty_category()
+	test_unicode_message()
+	test_special_characters()
+	test_all_severity_boundaries()
+	test_exactly_once_emission()
 
 
 func test_default_level() -> void:
@@ -325,3 +331,121 @@ func test_multiple_messages() -> void:
 		)
 
 	_check(valid, "Multiple messages preserve order")
+
+
+func test_empty_message() -> void:
+	_reset()
+
+	logger.info("", "TEST")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+		and captured_messages[0]["message"] == ""
+	)
+
+	_check(valid, "Empty message is preserved")
+
+
+func test_empty_category() -> void:
+	_reset()
+
+	logger.info("Empty category test", "")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+		and captured_messages[0]["category"] == ""
+	)
+
+	_check(valid, "Empty category is preserved")
+
+
+func test_unicode_message() -> void:
+	_reset()
+
+	var original: String = "Hello 世界 — Привет 🌍"
+
+	logger.info(original, "LOCALIZATION")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+		and captured_messages[0]["message"] == original
+	)
+
+	_check(valid, "Unicode message preserved")
+
+
+func test_special_characters() -> void:
+	_reset()
+
+	var original: String = "Line 1\nLine 2\t\"Quoted\" \\ Path"
+
+	logger.info(original, "TEST")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+		and captured_messages[0]["message"] == original
+	)
+
+	_check(valid, "Special characters preserved")
+
+
+func test_all_severity_boundaries() -> void:
+	var levels: Array[int] = [
+		logger.Level.TRACE,
+		logger.Level.DEBUG,
+		logger.Level.INFO,
+		logger.Level.WARN,
+		logger.Level.ERROR,
+		logger.Level.OFF
+	]
+
+	var valid: bool = true
+
+	for minimum: int in levels:
+		_reset()
+		logger.set_level(minimum)
+
+		logger.trace("Trace", "TEST")
+		logger.debug("Debug", "TEST")
+		logger.info("Info", "TEST")
+		logger.warn("Warn", "TEST")
+		logger.error("Error", "TEST")
+
+		var expected_count: int = 0
+
+		for severity: int in levels:
+			if severity == logger.Level.OFF:
+				continue
+
+			if severity >= minimum:
+				expected_count += 1
+
+		if captured_messages.size() != expected_count:
+			valid = false
+			printerr(
+				"Boundary failure: minimum=%d expected=%d actual=%d" % [
+					minimum,
+					expected_count,
+					captured_messages.size()
+				]
+			)
+
+	_check(valid, "All severity boundaries")
+
+
+func test_exactly_once_emission() -> void:
+	_reset()
+
+	logger.info("Single message", "TEST")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+	)
+
+	if valid:
+		valid = (
+			captured_messages[0]["message"] == "Single message"
+			and captured_messages[0]["level"] == logger.Level.INFO
+		)
+
+	_check(valid, "Exactly-once signal emission")
