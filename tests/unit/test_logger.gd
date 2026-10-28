@@ -72,6 +72,14 @@ func _run_tests() -> void:
 	test_normalize_category()
 	test_preserve_message()
 	test_off_suppresses_all()
+	test_trace_severity()
+	test_debug_severity()
+	test_info_severity()
+	test_warn_severity()
+	test_error_severity()
+	test_default_category()
+	test_timestamp_format()
+	test_multiple_messages()
 
 
 func test_default_level() -> void:
@@ -184,3 +192,136 @@ func test_off_suppresses_all() -> void:
 		valid,
         "Suppress all messages when OFF"
 	)
+
+
+func test_trace_severity() -> void:
+	_reset()
+
+	logger.set_level(logger.Level.TRACE)
+	logger.trace("Trace message", "TEST")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+		and captured_messages[0]["level"] == logger.Level.TRACE
+	)
+
+	_check(valid, "TRACE severity")
+
+
+func test_debug_severity() -> void:
+	_reset()
+
+	logger.debug("Debug message", "TEST")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+		and captured_messages[0]["level"] == logger.Level.DEBUG
+	)
+
+	_check(valid, "DEBUG severity")
+
+
+func test_info_severity() -> void:
+	_reset()
+
+	logger.info("Info message", "TEST")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+		and captured_messages[0]["level"] == logger.Level.INFO
+	)
+
+	_check(valid, "INFO severity")
+
+
+func test_warn_severity() -> void:
+	_reset()
+
+	logger.warn("Warning message", "TEST")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+		and captured_messages[0]["level"] == logger.Level.WARN
+	)
+
+	_check(valid, "WARN severity")
+
+
+func test_error_severity() -> void:
+	_reset()
+
+	logger.error("Error message", "TEST")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+		and captured_messages[0]["level"] == logger.Level.ERROR
+	)
+
+	_check(valid, "ERROR severity")
+
+
+func test_default_category() -> void:
+	_reset()
+
+	logger.info("No category specified")
+
+	var valid: bool = (
+		captured_messages.size() == 1
+		and captured_messages[0]["category"] == "GENERAL"
+	)
+
+	_check(valid, "Default category")
+
+
+func test_timestamp_format() -> void:
+	_reset()
+
+	logger.info("Timestamp test", "TEST")
+
+	var valid: bool = false
+
+	if captured_messages.size() == 1:
+		var timestamp: String = captured_messages[0]["timestamp"]
+		var parts: PackedStringArray = timestamp.split(":")
+
+		if parts.size() == 3:
+			var hour: String = parts[0]
+			var minute: String = parts[1]
+			var second: String = parts[2]
+
+			valid = (
+				hour.length() == 2
+				and minute.length() == 2
+				and second.length() == 2
+				and hour.is_valid_int()
+				and minute.is_valid_int()
+				and second.is_valid_int()
+				and int(hour) >= 0
+				and int(hour) <= 23
+				and int(minute) >= 0
+				and int(minute) <= 59
+				and int(second) >= 0
+				and int(second) <= 59
+			)
+
+	_check(valid, "Timestamp format HH:MM:SS")
+
+func test_multiple_messages() -> void:
+	_reset()
+
+	logger.info("First", "TEST")
+	logger.warn("Second", "TEST")
+	logger.error("Third", "TEST")
+
+	var valid: bool = (
+		captured_messages.size() == 3
+	)
+
+	if valid:
+		valid = (
+			captured_messages[0]["message"] == "First"
+			and captured_messages[1]["message"] == "Second"
+			and captured_messages[2]["message"] == "Third"
+		)
+
+	_check(valid, "Multiple messages preserve order")
