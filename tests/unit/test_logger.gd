@@ -5,6 +5,7 @@ const LoggerScript = preload("res://core/logging/log.gd")
 
 var logger: Node
 var captured_messages: Array[Dictionary] = []
+var file_path: String
 
 
 func _init() -> void:
@@ -34,6 +35,9 @@ func _init() -> void:
 	register_test(test_special_characters)
 	register_test(test_all_severity_boundaries)
 	register_test(test_exactly_once_emission)
+	register_test(test_file_logging)
+	register_test(test_file_append_and_disable)
+	register_test(test_file_open_failure)
 
 
 func setup_suite() -> void:
@@ -48,6 +52,13 @@ func teardown_suite() -> void:
 func setup_test() -> void:
 	captured_messages.clear()
 	logger.set_level(logger.Level.DEBUG)
+	file_path = "user://logger_test_%s_%s.log" % [Time.get_ticks_usec(), randi()]
+
+
+func teardown_test() -> void:
+	logger.disable_file_logging()
+	if FileAccess.file_exists(file_path):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(file_path))
 
 
 func _capture_message(
@@ -408,3 +419,33 @@ func test_exactly_once_emission() -> void:
 		)
 
 	assertions.check(valid, "Exactly-once signal emission")
+
+
+func test_file_logging() -> void:
+	assertions.equal(logger.enable_file_logging(file_path), OK, "Open log file")
+	logger.trace("hidden")
+	logger.info("Hello 世界", "player")
+	logger.warn("Second", "test")
+	var file := FileAccess.open(file_path, FileAccess.READ)
+	var contents := file.get_as_text() if file != null else ""
+	assertions.check(contents.contains("[INFO ] [PLAYER] Hello 世界\n") and contents.contains("[WARN ] [TEST] Second\n") and not contents.contains("hidden"), "File contains accepted formatted messages")
+	assertions.check(contents.find("Hello 世界") < contents.find("Second") and captured_messages.size() == 2, "File order and signals preserved")
+
+
+func test_file_append_and_disable() -> void:
+	assertions.equal(logger.enable_file_logging(file_path), OK, "Enable file logging")
+	logger.info("First")
+	logger.disable_file_logging()
+	logger.info("Omitted")
+	assertions.equal(logger.enable_file_logging(file_path), OK, "Reopen log file")
+	logger.info("Last")
+	logger.disable_file_logging()
+	var file := FileAccess.open(file_path, FileAccess.READ)
+	var contents := file.get_as_text() if file != null else ""
+	assertions.check(contents.contains("First") and contents.contains("Last") and not contents.contains("Omitted"), "Append and disable file logging")
+
+
+func test_file_open_failure() -> void:
+	assertions.check(logger.enable_file_logging("user://missing_logger_directory/file.log") != OK, "Invalid file path fails")
+	logger.info("Still delivered")
+	assertions.equal(captured_messages.size(), 1, "Signal survives file open failure")

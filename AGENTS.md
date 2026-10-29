@@ -30,6 +30,8 @@ Run all registered unit suites; exit code `1` indicates assertion failures:
 & 'C:\Tools\Godot\Godot_v4.7.2-stable_win64_console.exe' --headless --path . --script res://tests/framework/test_runner.gd
 ```
 
+The sandbox may prevent Godot from writing to its `user://` directory, causing file logging tests and Godot's own log initialization to fail. If this occurs, rerun the test command with sandbox escalation so Godot can write its temporary test files.
+
 No export presets or build scripts are checked in. No main scene is configured; create and select a scene in the editor before running gameplay. Prefer the editor UI when changing project settings.
 
 ## Coding Style & Naming Conventions

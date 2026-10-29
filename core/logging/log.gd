@@ -29,6 +29,28 @@ const LEVEL_NAMES := [
 ]
 
 var minimum_level: Level = Level.DEBUG
+var _log_file: FileAccess
+
+
+func enable_file_logging(path: String) -> Error:
+	disable_file_logging()
+	var mode := FileAccess.READ_WRITE if FileAccess.file_exists(path) else FileAccess.WRITE_READ
+	_log_file = FileAccess.open(path, mode)
+	if _log_file == null:
+		return FileAccess.get_open_error()
+	_log_file.seek_end()
+	return OK
+
+
+func disable_file_logging() -> void:
+	if _log_file != null:
+		_log_file.close()
+		_log_file = null
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		disable_file_logging()
 
 
 func trace(message: String, category: String = "GENERAL") -> void:
@@ -75,6 +97,13 @@ func _write(
 	]
 
 	print(formatted)
+	if _log_file != null:
+		_log_file.store_line(formatted)
+		_log_file.flush()
+		var file_error := _log_file.get_error()
+		if file_error != OK:
+			printerr("Log file write failed: ", file_error)
+			disable_file_logging()
 
 	message_logged.emit(
 		level,
