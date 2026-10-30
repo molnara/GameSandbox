@@ -45,3 +45,11 @@ Extend `tests/framework/test_suite.gd`, name files `test_<module>.gd`, and name 
 ## Commit & Pull Request Guidelines
 
 History follows Conventional Commits, including `test(logging): cover logger edge cases` and `refactor(testing): introduce reusable unit test framework`. Use an imperative summary and a scope when helpful. PRs should describe the behavior changed, link relevant issues, and report the test command and result. Include screenshots for visual changes. Keep generated caches, exported builds, and local secrets out of commits.
+
+## Local validation
+
+Run `./tools/validate.ps1` in PowerShell 7 to import the project and run all registered tests. The default executable is the console Godot 4.7.2 path above; pass `-Godot <path>` to override it. `-VersionTimeoutSeconds`, `-ImportTimeoutSeconds`, and `-TestTimeoutSeconds` set stage timeouts (defaults: 30, 120, and 120 seconds). Timed-out process trees are terminated.
+
+Each invocation retains a unique directory under ignored `.validation/`. `validation.json` records stage durations, exit codes, timeout status, and the engine version; each stage has stdout and stderr files, and import and test have Godot logs. `report.json` is version 1 and records the user data directory, total duration and assertion counts, and each case's suite, name, duration, assertion counts, and failure descriptions. A missing, invalid, inconsistent, or zero-case report fails validation. User data is isolated under the artifact directory and retained for inspection. Artifacts can be removed manually.
+
+If validation fails, inspect the named stage's stderr, stdout, and Godot log along with `validation.json`. Setup failures include an inaccessible executable or user data directory. Sandboxed Godot may fail to read the Windows certificate store; run validation with appropriate permissions if the diagnostics show that error. Direct runner invocation remains supported without a report; set `GAMESANDBOX_TEST_REPORT` to an absolute writable path to request one.
